@@ -1,6 +1,8 @@
+from django.core.validators import MinLengthValidator, MaxLengthValidator
 from django.db import models
 from django.template.defaultfilters import slugify
 from django.urls import reverse
+
 
 # Create your models here.
 def translit_to_eng(s: str) -> str:
@@ -11,7 +13,6 @@ def translit_to_eng(s: str) -> str:
          'ш': 'sh', 'щ': 'shch', 'ь': '', 's': 'y', 'ъ': '', 'э': 'r', 'ю': 'yu', 'я': 'ya'}
 
     return "".join(map(lambda x: d[x] if d.get(x, False) else x, s.lower()))
-
 
 
 class PublishedModel(models.Manager):
@@ -25,7 +26,10 @@ class Women(models.Model):
         PUBLISHED = 1, 'Опубликовано'
 
     title = models.CharField(max_length=255, verbose_name="Заголовок")
-    slug = models.SlugField(max_length=255, db_index=True, unique=True)
+    slug = models.SlugField(max_length=255, db_index=True, unique=True, validators=[
+        MinLengthValidator(5, message="Минимум 5 символов"),
+        MaxLengthValidator(100, message="Максимум 100 символов")],
+                            )
     content = models.TextField(blank=True, verbose_name="Текст статьи")
     time_create = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     time_update = models.DateTimeField(auto_now=True, verbose_name="Время изменения")
@@ -33,7 +37,8 @@ class Women(models.Model):
                                        default=Status.DRAFT, verbose_name="Статус")
     cat = models.ForeignKey('Category', on_delete=models.PROTECT, related_name='posts', verbose_name="Категории")
     tags = models.ManyToManyField('TagPost', related_name='tags', verbose_name="Тэги")
-    husband = models.OneToOneField('Husband', on_delete=models.SET_NULL, null=True, blank=True, related_name='wuman', verbose_name="Муж")
+    husband = models.OneToOneField('Husband', on_delete=models.SET_NULL, null=True, blank=True, related_name='wuman',
+                                   verbose_name="Муж")
 
     objects = models.Manager()
     published = PublishedModel()
@@ -56,6 +61,7 @@ class Women(models.Model):
     #     self.slug = slugify(translit_to_eng(self.title))
     #     super().save(*args, **kwargs)
 
+
 class Category(models.Model):
     name = models.CharField(max_length=100, db_index=True, verbose_name="Категория")
     slug = models.SlugField(max_length=255, unique=True, db_index=True)
@@ -69,6 +75,7 @@ class Category(models.Model):
     class Meta:
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
+
 
 class TagPost(models.Model):
     tag = models.CharField(max_length=100, db_index=True)
